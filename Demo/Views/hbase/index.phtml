@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HBase</title>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+</head>
+<body>
+<div style="font-size: 14px;">
+<form id="" action="" method="post">
+    <div>
+        <input id="table" name="table" type="text" value="test:content_billion" />
+        <input id="column" name="column" type="text" value="data" />
+        <input id="rowkey" name="rowkey" type="text" value="1000000" />
+    </div>
+    <div>
+        ：<input name="type[]" type="radio" value="主键" />主键 前缀： <input name="type[]" type="radio" value="" />
+        <input id="query" name="query" type="button" value="查询" />
+    </div>
+</form>
+</div>
+<div id="result" style="font-size: 14px;display: none;">
+    <div>查询用时：<span id="ms">123</span> ms</div>
+    <div>
+        <pre id="value">
+
+        </pre>
+    </div>
+</div>
+<script>
+$(function(){
+    $('#query').click(function(){
+        var table = $('#table').val();
+        var column = $('#column').val();
+        var rowkey = $('#rowkey').val();
+        $.post('', {table:table, column:column, rowkey:rowkey}, function(data){
+            if (data.status) {
+                $('#result').show();
+                $('#ms').empty().html(data.ms);
+                $('#value').empty().html(data.value);
+            } else {
+                alert('error');
+            }
+        }, 'json');
+    });
+});
+</script>
+</body>
+</html>
