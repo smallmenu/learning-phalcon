@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">
+<cross-domain-policy>
+    <site-control permitted-cross-domain-policies="master-only" />
+    <allow-access-from domain="*.phalcon.loc" />
+    <allow-access-from domain="*.phalcon.dev" />
+    <allow-access-from domain="*.phalcon.com" />
+    <allow-http-request-headers-from domain="*.phalcon.loc" headers="*"/>
+    <allow-http-request-headers-from domain="*.phalcon.dev" headers="*"/>
+    <allow-http-request-headers-from domain="*.phalcon.com" headers="*"/>
+</cross-domain-policy>

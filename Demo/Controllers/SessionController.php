@@ -21,7 +21,20 @@ class SessionController extends Controller
     /**
      * 初始化控制器
      */
-    public function initialize() {}
+    public function initialize()
+    {
+        $this->view->disable();
+    }
+
+    /**
+     *
+     * @debug http://demo.phalcon.loc/session
+     */
+    public function indexAction()
+    {
+        print_r($this->session);
+        exit;
+    }
 
     /**
      *
@@ -44,7 +57,7 @@ class SessionController extends Controller
      */
     public function getAction()
     {
-        if ($this->session->has('session1') && $this->session->has('session2')) {
+        if ($this->session->has('session1') || $this->session->has('session2')) {
             echo 'session1:';
             print_r($this->session->get('session1'));
             echo PHP_EOL;
@@ -62,9 +75,16 @@ class SessionController extends Controller
         $this->session->remove('session1');
         echo 'session1:';
         print_r($this->session->get('session1'));
-        echo PHP_EOL;
-        echo 'session2:';
-        print_r($this->session->get('session2'));
-        $this->session->destroy();
+
+    }
+
+    /**
+     *
+     * @debug http://demo.phalcon.loc/session/destroy
+     */
+    public function destroyAction()
+    {
+        $_SESSION = null;
+        var_dump($this->session->destroy());
     }
 }

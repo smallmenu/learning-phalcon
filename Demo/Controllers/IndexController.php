@@ -1,6 +1,6 @@
 <?php
 /**
- * 默认控制器
+ * Index
  *
  * @author
  * @copyright
@@ -136,7 +136,18 @@ class IndexController extends Controller
         $this->view->content = 'This is Content';
 
         // 重定义视图
+        //$this->view->pick('index/view-other');
+    }
+
+    /**
+     * 视图
+     *
+     * @debug http://demo.phalcon.loc/index/viewdisable
+     */
+    public function viewDisableAction()
+    {
         $this->view->pick('index/view-other');
+        $this->view->disable();
     }
 
     /**

@@ -1,23 +1,29 @@
 <?php
 /**
- * 入口文件
+ * 入口
  *
  * @author
  * @copyright
  */
 
-namespace Demo;
-
-define('APP_NAME',      'Demo');
-define('APP_ENV',       'develop');
-define('APP_PATH',      realpath('..') . '/');
-define('APP_CONFIG',    APP_PATH. '/Config/');
-define('APP_BEGIN',     microtime(true));
+use Demo\Bootstrap;
+use Phalcon\Http\Response;
+use Phalcon\DI\FactoryDefault;
 
 try {
-    include APP_PATH . 'Bootstrap.php';
-    $application = new \Demo\Bootstrap(APP_CONFIG. APP_ENV. '.ini');
+    include __DIR__ . '/../Config/Define.php';
+    include SDK_DIR . '/SDK.php';
+    include APP_DIR . '/Bootstrap.php';
+
+    $application = new Bootstrap();
     $application->run();
+} catch (\Phalcon\Mvc\Dispatcher\Exception $e) {
+    FactoryDefault::getDefault()->get('logger')->notice($e->getMessage());
+    $response = new Response();
+    $response->setStatusCode(404, 'Not Found')->send();
 } catch (\Exception $e) {
-    echo $e->getMessage();
+    $message = 'Exception: ' . $e->getMessage();
+    FactoryDefault::getDefault()->get('logger')->error($message);
+    $response = new Response();
+    $response->setStatusCode(503, debugMode() ? $message : null)->send();
 }

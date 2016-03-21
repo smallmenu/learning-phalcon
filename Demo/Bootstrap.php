@@ -17,21 +17,17 @@ use Phalcon\Mvc\Router;
 use Phalcon\Mvc\Dispatcher;
 use Phalcon\Mvc\View;
 use Phalcon\Mvc\Application;
-use Phalcon\Http\Response;
-use Phalcon\Http\Request;
-use Phalcon\Config\Adapter\Ini;
-use Phalcon\Http\Response\Cookies;
 use Phalcon\Cache\Frontend\Data;
 use Phalcon\Cache\Backend\Memcache;
-use Phalcon\Cache\Backend\Redis;
 use Phalcon\Logger;
-use Phalcon\Events\Manager as EventsManager;
-use Phalcon\Logger\Adapter\File as LoggerFile;
-use Phalcon\Session\Adapter\Files as SessionFiles;
+use Phalcon\Logger\Adapter\File;
+use Phalcon\Logger\Formatter\Line;
+use Phalcon\Db\Adapter\Pdo\Mysql;
+use Phalcon\Events\Manager;
+use Phalcon\Mvc\Model\MetaData\Memcache as MetaDataMemcache;
+use Phalcon\Mvc\Model\MetaData\Redis as MetaDataRedis;
 use Phalcon\Session\Adapter\Memcache as SessionMemcache;
-use Extend\Db\Hbase\Hbase;
-use Extend\Phalcon\Session\Adapter\Redis as SessionRedis;
-use Extend\Phalcon\Http\Response\Cookies as GeneralCookies;
+use Phalcon\Session\Adapter\Files as SessionFiles;
 
 /**
  * Class Bootstrap
@@ -39,13 +35,6 @@ use Extend\Phalcon\Http\Response\Cookies as GeneralCookies;
  */
 class Bootstrap
 {
-    /**
-     * 应用配置
-     *
-     * @var Ini
-     */
-    protected $configs;
-
     /**
      * 应用实例
      *
@@ -61,44 +50,53 @@ class Bootstrap
     protected $mode;
 
     /**
+     * DI
+     *
+     * @var
+     */
+    protected $di;
+
+    /**
      * 构造函数
      *
-     * @param $config
      * @param $mode
      * @throws \Exception
      */
-    public function __construct($config, $mode = '')
+    public function __construct($mode = '')
     {
-        if (!is_file($config)) {
-            throw new \Exception('APP Config Valid');
-        }
-        $this->configs = new Ini($config);
         $this->mode = $mode;
-
         $this->application = $this->mode === 'CLI' ? new Console() : new Application();
+        $this->initApplication();
     }
 
     /**
-     * 应用目录注册
+     * 初始化
+     *
+     */
+    public function initApplication()
+    {
+        if (debugMode()) {
+            ini_set('error_reporting', E_ALL);
+            ini_set('display_errors', 1);
+        }
+    }
+
+    /**
+     * 注册命名空间
+     *
      */
     protected function autoLoader()
     {
         $loader = new Loader();
-        $loader->registerNamespaces(array(
-            'Demo\Controllers' => APP_PATH . $this->configs->dirs->controllersDir,
-            'Demo\Models' => APP_PATH . $this->configs->dirs->modelsDir,
-            'Demo\Plugins' => APP_PATH . $this->configs->dirs->pluginsDir,
-            'Demo\Tasks' => APP_PATH . $this->configs->dirs->tasksDir,
-            'Extend' => APP_PATH . $this->configs->dirs->extendDir,
-        ))->register();
+        $loader->registerNamespaces(config('bootstrap.namespaces'))->register();
     }
 
     /**
-     * 默认服务注入依赖
+     * 默认服务依赖注入
+     *
      */
     protected function services()
     {
-        $configs = $this->configs;
         $mode = $this->mode;
 
         $di = $this->mode === 'CLI' ? new Cli() : new FactoryDefault();
@@ -107,103 +105,166 @@ class Bootstrap
         $di->set('dispatcher', function () use ($mode) {
             $dispatcher = new Dispatcher();
             $dispatcher = $mode === 'CLI' ? new \Phalcon\CLI\Dispatcher() : new Dispatcher();
-            $dispatcher->setDefaultNamespace($mode === 'CLI' ? 'Demo\Tasks' : 'Demo\Controllers');
+            $default = config('bootstrap.dispatcher');
+            $dispatcher->setDefaultNamespace($mode === 'CLI' ? $default['cli'] : $default['default']);
+
             return $dispatcher;
-        });
+        }, true);
+
+        // 日志
+        $di->set('logger', function () {
+            $config = config('logger');
+            $adapter = $config['adapter'];
+            $filename = $config[$adapter]['filename'];
+            $filedir = dirname($filename);
+
+            if (empty($config)) {
+                throw new \Exception('logger config Require');
+            }
+            if (!is_dir($filedir)) {
+                mkdir($filedir, 0755, true);
+            }
+            $logger = new File($filename);
+            $formatter = new Line(null, 'Y-m-d H:i:s');
+            $loglevel = config('app.loglevel');
+            $logger->setFormatter($formatter);
+            $logger->setLogLevel($loglevel ? $loglevel : \Phalcon\Logger::ERROR);
+
+            return $logger;
+        }, true);
+
+        // 路由
+        if ($load = load('router', null, true)) {
+            if ($load instanceof Router) {
+                $di->set('router', $load);
+            }
+        }
 
         // 视图
-        $di->set('view', function () use ($configs) {
+        $di->set('view', function () {
             $view = new View();
-            $view->setViewsDir(APP_PATH . $configs->dirs->viewsDir);
+            $view->setViewsDir(APP_VIEW);
+
             return $view;
-        });
+        }, true);
 
         // 加解密
-        $di->set('crypt', function () use ($configs) {
-            $crypt = new Crypt();
-            $crypt->setKey($configs->crypt->authkey);
-            return $crypt;
-        });
+        if ($config = config('crypt')) {
+            $di->set('crypt', function () use ($config) {
+                $crypt = new Crypt();
+                $crypt->setKey($config['authkey']);
 
-        // Cache
-        $di->setShared('cache', function () use ($configs) {
-            if (isset($configs->cache)) {
-                $adapter = strtolower($configs->cache->adapter);
-                $options = $configs->cache->toArray();
-            }
-            $frontend = new Data(array('lifetime' => $configs->cache->lifetime));
-            switch ($adapter) {
-                case 'memcache' :
-                    $cache = new Memcache($frontend, $options);
-                    break;
-                case 'redis':
-                    $cache = new Redis($frontend, $options);
-                    break;
-            }
-            return $cache;
-        });
+                return $crypt;
+            }, true);
+        }
 
-        // Cookie
-        $di->setShared('cookies', function () use ($configs) {
-            if (isset($configs->cookie)) {
-                $cookies = new GeneralCookies($configs->cookie->toArray());
-            }
-            $cookies = new Cookies();
-            return $cookies;
-        });
+        // 默认缓存
+        if ($config = config('cache')) {
+            $di->set('cache', function () use ($config) {
+                $cache = null;
+                $adapter = strtolower($config['adapter']);
+                $options = $config[$adapter];
+                $frontend = new Data(array('lifetime' => $config['lifetime']));
+                switch ($adapter) {
+                    case 'memcache' :
+                        $cache = new Memcache($frontend, $options);
+                        break;
+                    case 'redis':
+                        if (empty($options['auth'])) {
+                            unset($options['auth']);
+                        }
+                        $cache = new \Phalcon\Extend\Cache\Backend\Redis($frontend, $options);
+                        break;
+                }
+
+                return $cache;
+            }, true);
+        }
+
+        // Cookies
+        if ($config = config('cookies')) {
+            $di->set('cookies', function () use ($config) {
+                $cookies = new \Phalcon\Extend\Http\Response\Cookies($config);
+                if (!config('crypt.authkey')) {
+                    $cookies->useEncryption(false);
+                }
+
+                return $cookies;
+            }, true);
+        }
 
         // Session
-        $di->setShared('session', function () use ($configs) {
-            if (isset($configs->session)) {
-                $adapter = strtolower($configs->session->adapter);
-                $options = $configs->session->toArray();
-            }
-            switch ($adapter) {
-                case 'memcache' :
-                    $session = new SessionMemcache($options);
-                    $session->start();
-                    break;
-                case 'redis' :
-                    $session = new SessionRedis($options);
-                    $session->start();
-                    break;
-                default :
-                    $session = new SessionFiles();
-                    $session->start();
-                    break;
-            }
-            return $session;
-        });
+        if ($config = config('session')) {
+            $di->set('session', function () use ($config) {
+                if (!empty($config['options'])) {
+                    foreach ($config['options'] as $name => $value) {
+                        ini_set("session.$name", $value);
+                    }
+                }
+                $adapter = strtolower($config['adapter']);
+                $options = $config[$adapter];
+                switch ($adapter) {
+                    case 'memcache' :
+                        $session = new SessionMemcache($options);
+                        break;
+                    case 'redis' :
+                        $session = new \Phalcon\Extend\Session\Adapter\Redis($options);
+                        break;
+                    default :
+                        $session = new SessionFiles();
+                        break;
+                }
+                $session->start();
+
+                return $session;
+            }, true);
+        }
 
         // Db
-        $di->setShared('db', function () use ($configs) {
+        if ($config = config('db')) {
+            $di->set('db', function () use ($config) {
+                $mysql = new Mysql($config);
+                if (debugMode()) {
+                    $eventsManager = new Manager();
+                    $logger = new File(APP_LOG . DS . 'Mysql' . LOGEXT);
+                    $formatter = new Line(null, 'Y-m-d H:i:s');
+                    $logger->setFormatter($formatter);
+                    $eventsManager->attach('db', function ($event, $mysql) use ($logger) {
+                        if ($event->getType() == 'beforeQuery') {
+                            $logger->log($mysql->getSQLStatement(), Logger::INFO);
+                        }
+                        if ($event->getType() == 'afterQuery') {
+                        }
+                    });
 
-            $dbclass = 'Phalcon\Db\Adapter\Pdo\\' . ucfirst($configs->database->adapter);
-            $db = new $dbclass($configs->database->toArray());
+                    $mysql->setEventsManager($eventsManager);
+                }
 
-            if ($configs->application->debug) {
-                $eventsManager = new EventsManager();
-                $logger = new LoggerFile(APP_PATH . $configs->dirs->logDir . 'db.log');
-                $eventsManager->attach('db', function ($event, $db) use ($logger) {
-                    if ($event->getType() == 'beforeQuery') {
-                        $logger->log($db->getSQLStatement(), Logger::INFO);
-                    }
-                });
-                $db->setEventsManager($eventsManager);
-            }
+                return $mysql;
+            }, true);
+        }
 
-            return $db;
-        });
+        // DB 元信息
+        if ($config = config('metadata')) {
+            $di->set('modelsMetadata', function () use ($config) {
+                $modelsMetadata = null;
+                $adapter = strtolower($config['adapter']);
+                $options = $config[$adapter];
+                switch ($adapter) {
+                    case 'memcache' :
+                        $modelsMetadata = new MetaDataMemcache($options);
+                        break;
+                    case 'redis':
+                        if (empty($options['auth'])) {
+                            unset($options['auth']);
+                        }
+                        $modelsMetadata = new MetaDataRedis($options);
+                        break;
+                }
 
-        // Hbase
-        $di->setShared('hbase', function () use ($configs) {
-            if (isset($configs->hbase)) {
-                $options = $configs->hbase->toArray();
-                return new Hbase($options);
-            } else {
-                throw new \Exception('Hbase Config Valid');
-            }
-        });
+                return $modelsMetadata;
+            }, true);
+        }
 
         $this->application->setDI($di);
     }
@@ -219,7 +280,7 @@ class Bootstrap
 
         if ($this->mode === 'CLI') {
             if (empty($arguments)) {
-                throw \Exception('CLI Require Arguments');
+                throw new \Exception('CLI Require Arguments');
             }
             $this->application->handle($arguments);
         } else {

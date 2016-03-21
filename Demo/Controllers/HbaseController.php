@@ -7,22 +7,28 @@
  */
 namespace Demo\Controllers;
 
-use Extend\Db\Hbase\TIncrement;
+
 use Phalcon\Mvc\Controller;
-use Extend\Db\Hbase\Mutation;
-use Extend\Db\Hbase\BatchMutation;
-use Extend\Db\Hbase\ColumnDescriptor;
-use Extend\Db\Hbase\AlreadyExists;
-use Extend\Db\Hbase\IOError;
-use Extend\Db\Hbase\TScan;
+
+use SDK\Library\Db\Hbase\TIncrement;
+use SDK\Library\Db\Hbase\Mutation;
+use SDK\Library\Db\Hbase\BatchMutation;
+use SDK\Library\Db\Hbase\ColumnDescriptor;
+use SDK\Library\Db\Hbase\AlreadyExists;
+use SDK\Library\Db\Hbase\IOError;
+use SDK\Library\Db\Hbase\TScan;
 
 class HbaseController extends Controller
 {
-    protected $table = "detailedinfo";
+    protected $table = "raw:test";
 
-    public function onConstruct() {}
+    public function onConstruct()
+    {
+    }
 
-    public function initialize(){ }
+    public function initialize()
+    {
+    }
 
     /**
      * @debug http://demo.phalcon.loc/hbase
@@ -36,7 +42,7 @@ class HbaseController extends Controller
             $column = $this->request->getPost('column');
             $rowkey = $this->request->getPost('rowkey');
 
-            /** @var \Extend\Db\Hbase\HbaseIf $client */
+            /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
             $client = $this->hbase->client();
             $this->hbase->open();
 
@@ -51,7 +57,7 @@ class HbaseController extends Controller
             foreach ($row as $k => $v) {
                 $data[] = $v->value;
             }
-            $result['value'] = var_export($data,true);
+            $result['value'] = var_export($data, true);
 
             $result['ms'] = $usedtime * 1000;
             echo json_encode($result);
@@ -64,7 +70,7 @@ class HbaseController extends Controller
      */
     public function getAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = 'test:demo';
@@ -83,7 +89,7 @@ class HbaseController extends Controller
      */
     public function getRowAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $t = "detailedinfo";
@@ -92,11 +98,11 @@ class HbaseController extends Controller
 
         //print_r($rows);
         foreach ($rows as $key => $row) {
-            echo "rowkey:".$row->row;
+            echo "rowkey:" . $row->row;
             echo "<br/>";
             foreach ($row->columns as $k => $column) {
-                echo "column:". $k;
-                echo "--value:".$column->value;
+                echo "column:" . $k;
+                echo "--value:" . $column->value;
                 echo "<br/>";
             }
         }
@@ -108,7 +114,7 @@ class HbaseController extends Controller
      */
     public function createAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "php_demo";
@@ -116,8 +122,8 @@ class HbaseController extends Controller
         $tables = $client->getTableNames();
         if (array_search($table, $tables)) {
             if ($client->isTableEnabled($table)) {
-              echo("disabling table: {$table}\n");
-              $client->disableTable($table);
+                echo("disabling table: {$table}\n");
+                $client->disableTable($table);
             }
             echo("deleting table: {$table}\n");
             $client->deleteTable($table);
@@ -131,7 +137,7 @@ class HbaseController extends Controller
             $client->createTable($table, $columnFamilys);
 
             echo("created table: {$table}\n");
-            $descriptors =  $client->getColumnDescriptors($table);
+            $descriptors = $client->getColumnDescriptors($table);
             asort($descriptors);
             foreach ($descriptors as $col) {
                 echo("  column: {$col->name}, maxVer: {$col->maxVersions}\n");
@@ -147,18 +153,16 @@ class HbaseController extends Controller
      */
     public function putAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
-        $table = "test:compress";
 
         try {
             $rowkey = '001';
             $mutations = array(
-                new Mutation(array('column' => 'data:url', 'value' => 'http://www.baidu.com')),
-                new Mutation(array('column' => 'data:html', 'value' => '<html>内容</html>'))
+                new Mutation(array('column' => 'd:url', 'value' => 'http://www.baidu.com')),
             );
-            $client->mutateRow($table, $rowkey, $mutations, array());
+            $client->mutateRow($this->table, $rowkey, $mutations, array());
         } catch (IOError $e) {
             echo($e->message);
         }
@@ -171,7 +175,7 @@ class HbaseController extends Controller
      */
     public function putsAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "php_demo";
@@ -195,7 +199,7 @@ class HbaseController extends Controller
         $startTime = microtime(true);
         foreach ($urls as $key => $url) {
             $data = array();
-            $data['row'] = md5($url) . "-". date("YmdHis");
+            $data['row'] = md5($url) . "-" . date("YmdHis");
             $data['mutations'] = array(
                 new Mutation(array('column' => 'entry:url', 'value' => $url)),
             );
@@ -222,7 +226,7 @@ class HbaseController extends Controller
      */
     public function packAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "test:demo";
@@ -232,9 +236,9 @@ class HbaseController extends Controller
 
         for ($i = 1; $i < 100; $i++) {
             $data = array();
-            $data['row'] = pack('N', $i).'-'.time();
+            $data['row'] = pack('N', $i) . '-' . time();
             $data['mutations'] = array(
-                new Mutation(array('column' => 'd:value', 'value' => "value".$i)),
+                new Mutation(array('column' => 'd:value', 'value' => "value" . $i)),
             );
             array_push($bitches, new BatchMutation($data));
         }
@@ -254,7 +258,7 @@ class HbaseController extends Controller
      */
     public function scanAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "test:content_billion";
@@ -276,7 +280,7 @@ class HbaseController extends Controller
      */
     public function scanFilterAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "test:content_billion";
@@ -306,12 +310,12 @@ class HbaseController extends Controller
      */
     public function deleteAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "test:content_billion";
 
-        for ($i = 1; $i <1000000; $i++) {
+        for ($i = 1; $i < 1000000; $i++) {
             $client->deleteAllRow($table, $i, array());
             echo $i;
         }
@@ -323,12 +327,12 @@ class HbaseController extends Controller
      */
     public function countAction()
     {
-        /** @var \Extend\Db\Hbase\HbaseIf $client */
+        /** @var \SDK\Library\Db\Hbase\HbaseIf $client */
         $client = $this->hbase->client();
         $this->hbase->open();
         $table = "test:content";
 
-        $amount = $client->atomicIncrement('test:content', 'COUNTER5', 'd:id' ,1);
+        $amount = $client->atomicIncrement('test:content', 'COUNTER5', 'd:id', 1);
         print_r($amount);
         exit;
 

@@ -12,7 +12,6 @@ use Phalcon\Mvc\Controller;
 
 class CacheController extends Controller
 {
-
     /**
      * __construct alias
      */
@@ -25,11 +24,6 @@ class CacheController extends Controller
      */
     public function initialize()
     {
-    }
-
-    public function indexAction()
-    {
-        echo 'helloworld';
         $this->view->disable();
     }
 
@@ -39,10 +33,13 @@ class CacheController extends Controller
      */
     public function setAction()
     {
-        // cache 会依据crypt自动加密
-        $this->cache->save('cache', 'cache value');
-        $this->cache->save('cache300', 'cache value', 300);
-        $this->cache->save('cachedata', array('test1', 'test2'));
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        $cache->save('cache', 'cache', -1);
+        $cache->save('cachedefault', 'cache default');
+        $cache->save('cache300', 'cache 300', 300);
+        $cache->save('cachedata', array('test1', 'test2'));
 
         echo 'cache set';
         $this->view->disable();
@@ -54,18 +51,78 @@ class CacheController extends Controller
      */
     public function getAction()
     {
-        if ($this->cache->exists('cache')) {
-            echo 'cache:'. $this->cache->get('cache');
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        if ($cache->exists('cachedefault')) {
+            echo 'cachedefault:' . $cache->get('cachedefault');
             echo PHP_EOL;
-            $this->cache->delete('cache');
-            echo 'cache:'. $this->cache->get('cache');
+            $cache->delete('cachedefault');
+            echo 'afterdelete cachedefault:' . $cache->get('cachedefault');
             echo PHP_EOL;
         }
-        $this->view->disable();
     }
 
+    /**
+     *
+     * @debug http://demo.phalcon.loc/cache/delete
+     */
+    public function deleteAction()
+    {
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        $cache->delete('9sescg5v3lq93odfhd3f34aue3');
+    }
+
+    /**
+     *
+     * @debug http://demo.phalcon.loc/cache/keys
+     */
+    public function keysAction()
+    {
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        print_r($cache->queryKeys());
+    }
+
+    /**
+     *
+     * @debug http://demo.phalcon.loc/cache/sadd
+     */
+    public function saddAction()
+    {
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        // Just For Redis Test
+        var_dump($cache->ping());
+        var_dump($cache->sAdd('list', 'list2'));
+    }
+
+    /**
+     *
+     * @debug http://demo.phalcon.loc/cache/flushdb
+     */
+    public function flushDBAction()
+    {
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        // Just For Redis Test
+        var_dump($cache->flushDB());
+    }
+
+    /**
+     *
+     * @debug http://demo.phalcon.loc/cache/flush
+     */
     public function flushAction()
     {
-        $this->cache->flush();
+        /** @var \Phalcon\Cache\BackendInterface $cache */
+        $cache = $this->cache;
+
+        $cache->flush();
     }
 }

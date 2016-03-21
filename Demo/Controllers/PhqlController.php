@@ -49,4 +49,14 @@ class PhqlController extends Controller
         print_r($rows->toArray());
         exit;
     }
+
+    public function builderAction()
+    {
+        $robots = $this->modelsManager->createBuilder()
+            ->from('')
+            ->join('RobotsParts')
+            ->orderBy('Robots.name')
+            ->getQuery()
+            ->execute();
+    }
 }

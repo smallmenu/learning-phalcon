@@ -30,10 +30,14 @@ class CookieController extends Controller
     public function setAction()
     {
         // cookie 会依据crypt自动加密
-        $this->cookies->set('remember-me', 'some value', time() + 36000);
-        echo 'cookie set';
+        $this->cookies->set('remember-me', 'cookies value', time()+1200);
+        echo 'cookies set';
     }
 
+    /**
+     *
+     * @debug http://demo.phalcon.loc/cookie/get
+     */
     public function getAction()
     {
         if ($this->cookies->has('remember-me')) {
@@ -42,9 +46,7 @@ class CookieController extends Controller
             $rememberMe = $this->cookies->get('remember-me');
             echo $rememberMe;echo PHP_EOL;
 
-            // 我认为是phalcon的Bug，在指定domain的情况不能直接使用delete方法删除
-            $this->cookies->set('remember-me', null, time()-3600);
-            //$this->cookies->delete('remember-me');
+            $this->cookies->set('remember-me', null, time()-86400);
         }
     }
 }
