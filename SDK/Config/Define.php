@@ -7,15 +7,15 @@ define('RUNTIME_START_TIME', microtime(true));
 define('DEBUG_MODE', true);
 
 // SDK MySQL
-define('SDK_MYSQL_HOST', '192.168.0.117');
-define('SDK_MYSQL_PORT', 3307);
-define('SDK_MYSQL_USER', 'dahaiyang');
-define('SDK_MYSQL_PASS', 'dahaiyang2016');
+define('SDK_MYSQL_HOST', '192.168.0.92');
+define('SDK_MYSQL_PORT', 3306);
+define('SDK_MYSQL_USER', 'root');
+define('SDK_MYSQL_PASS', '123123');
 
 // SDK Redis
-define('SDK_REDIS_HOST', '127.0.0.1');
+define('SDK_REDIS_HOST', '192.168.0.92');
 define('SDK_REDIS_PORT', 6379);
-define('SDK_REDIS_INDEX', 1);
+define('SDK_REDIS_INDEX', 0);
 define('SDK_REDIS_AUTH', '123123');
 
 // SDK Memcache

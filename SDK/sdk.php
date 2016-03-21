@@ -312,3 +312,48 @@ function strCharcut($string, $length, $suffix = null)
 
     return implode('', $result_array);
 }
+
+/**
+ * 获取用户IP
+ *
+ * @param bool $remote  false自定义策略（默认可伪造）或true仅获取remote
+ * @param bool $strict  严格模式，过滤私有地址
+ * @return null|string
+ */
+function remoteAddr($remote = false, $strict = false)
+{
+    static $remote_addr = false;
+
+    if ($remote_addr === false) {
+        if ($remote) {
+            $keys = array(
+                'REMOTE_ADDR'
+            );
+        } else {
+            $keys = array(
+                'HTTP_CLIENT_IP',
+                'HTTP_X_FORWARDED_FOR',
+                'HTTP_X_FORWARDED',
+                'HTTP_X_CLUSTER_CLIENT_IP',
+                'HTTP_FORWARDED_FOR',
+                'HTTP_FORWARDED',
+                'REMOTE_ADDR'
+            );
+        }
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $_SERVER) === true) {
+                foreach (explode(',', $_SERVER[$key]) as $ip) {
+                    $ip = trim($ip);
+                    $flag = $strict ? FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE : null;
+                    if ($ip && filter_var($ip, FILTER_VALIDATE_IP, $flag) !== false) {
+                        return $remote_addr = $ip;
+                    }
+                }
+            }
+        }
+
+        $remote_addr = null;
+    }
+
+    return $remote_addr;
+}
