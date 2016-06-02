@@ -15,4 +15,4 @@ define('APP_DATA',      APP_DIR . '/Data');
 define('APP_LOG',       APP_DATA . '/Log');
 
 // SDK 目录
-define('SDK_DIR',       APP_DIR . '/../SDK');
+define('SDK_DIR',       APP_DIR . '/../../PhalconSDK');

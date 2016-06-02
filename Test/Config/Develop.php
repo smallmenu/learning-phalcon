@@ -11,21 +11,6 @@ return array(
         'url'      => 'http://test.phalcon.loc/',
     ),
 
-    // bootstrap
-    'bootstrap' => array(
-        'dispatcher' => array(
-            'default' => 'Test\Controllers',
-            'cli'     => 'Test\Tasks',
-        ),
-        'namespaces' => array(
-            'Test\Controllers' => APP_DIR . '/Controllers',
-            'Test\Models'      => APP_DIR . '/Models',
-            'Test\Plugins'     => APP_DIR . '/Plugins',
-            'Test\Tasks'       => APP_DIR . '/Tasks',
-            'Test\Library'     => APP_DIR . '/Library',
-        )
-    ),
-
     // crypt
     'crypt'     => array(
         'authkey' => '123',
@@ -37,7 +22,7 @@ return array(
         'username' => SDK_MYSQL_USER,
         'password' => SDK_MYSQL_PASS,
         'port'     => SDK_MYSQL_PORT,
-        'dbname'   => 'db_companyinfomation',
+        'dbname'   => 'solr',
         'charset'  => 'utf8',
     ),
 
@@ -106,13 +91,5 @@ return array(
         'expire' => 3600,
         'path'   => '/',
         'domain' => 'phalcon.loc',
-    ),
-
-    // logger
-    'logger'    => array(
-        'adapter' => 'file',
-        'file'    => array(
-            'filename' => APP_LOG . DS . APP_NAME . LOGEXT,
-        ),
     ),
 );

@@ -6,21 +6,6 @@ return array(
         'url'    => 'http://demo.phalcon.dev',
     ),
 
-    // bootstrap
-    'bootstrap'     => array(
-        'dispatcher' => array(
-            'default' => 'Demo\Controllers',
-            'cli'     => 'Demo\Tasks',
-        ),
-        'namespaces' => array(
-            'Demo\Controllers' => APP_DIR . '/Controllers',
-            'Demo\Models'      => APP_DIR . '/Models',
-            'Demo\Plugins'     => APP_DIR . '/Plugins',
-            'Demo\Tasks'       => APP_DIR . '/Tasks',
-            'Demo\Library'     => APP_DIR . '/Library',
-        )
-    ),
-
     // crypt
     'crypt'     => array(
         'authkey' => '123',
@@ -120,13 +105,4 @@ return array(
         'path'   => '/',
         'domain' => SDK_DOMAIN,
     ),
-
-    // logger
-    'logger' => array(
-        'adapter' => 'file',
-        'level' => \Phalcon\Logger::DEBUG,
-        'file' => array(
-            'filename' => APP_LOG . DS . APP_NAME . LOGEXT,
-        ),
-    )
 );

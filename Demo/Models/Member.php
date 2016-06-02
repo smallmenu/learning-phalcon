@@ -46,6 +46,8 @@ class Member extends Model
     {
         // 定义行为，软删除
         $this->addBehavior(new SoftDelete(array('field' => 'status', 'value' => Member::UNVALID)));
+        // 动态更新
+        $this->useDynamicUpdate(true);
     }
 
     /**

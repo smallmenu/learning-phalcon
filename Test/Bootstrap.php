@@ -64,21 +64,26 @@ class Bootstrap
      */
     public function __construct($mode = '')
     {
+        $this->initApplication();
         $this->mode = $mode;
         $this->application = $this->mode === 'CLI' ? new Console() : new Application();
-        $this->initApplication();
     }
 
     /**
-     * 初始化
+     * 初始化工作
      *
      */
     public function initApplication()
     {
-        if (debugMode()) {
-            ini_set('error_reporting', E_ALL);
-            ini_set('display_errors', 1);
-        }
+        do {
+            // 配置检查
+            $appConfigs = array('logger', 'bootstrap');
+            foreach ($appConfigs as $config) {
+                if (loadPath($config) === false) {
+                    exit('missing basic config ' . $config);
+                }
+            }
+        } while (0);
     }
 
     /**
@@ -88,38 +93,30 @@ class Bootstrap
     protected function autoLoader()
     {
         $loader = new Loader();
-        $loader->registerNamespaces(config('bootstrap.namespaces'))->register();
+        $bootstrap = load('bootstrap');
+        $namespaces = $bootstrap['namespaces'];
+        $loader->registerNamespaces($namespaces)->register();
     }
 
     /**
      * 默认服务依赖注入
      *
      */
-    protected function services()
+    protected function commonServices()
     {
         $mode = $this->mode;
 
         $di = $this->mode === 'CLI' ? new Cli() : new FactoryDefault();
 
-        // 命名空间
-        $di->set('dispatcher', function () use ($mode) {
-            $dispatcher = new Dispatcher();
-            $dispatcher = $mode === 'CLI' ? new \Phalcon\CLI\Dispatcher() : new Dispatcher();
-            $default = config('bootstrap.dispatcher');
-            $dispatcher->setDefaultNamespace($mode === 'CLI' ? $default['cli'] : $default['default']);
-
-            return $dispatcher;
-        }, true);
-
         // 日志
         $di->set('logger', function () {
-            $config = config('logger');
+            $config = load('logger');
             $adapter = $config['adapter'];
             $filename = $config[$adapter]['filename'];
             $filedir = dirname($filename);
 
             if (empty($config)) {
-                throw new \Exception('logger config Require');
+                throw new \Exception('logger config Require failed');
             }
             if (!is_dir($filedir)) {
                 mkdir($filedir, 0755, true);
@@ -131,6 +128,19 @@ class Bootstrap
             $logger->setLogLevel($loglevel ? $loglevel : \Phalcon\Logger::ERROR);
 
             return $logger;
+        }, true);
+        $this->application->setDI($di);
+
+
+        // 命名空间
+        $di->set('dispatcher', function () use ($mode) {
+            $dispatcher = new Dispatcher();
+            $dispatcher = $mode === 'CLI' ? new \Phalcon\CLI\Dispatcher() : new Dispatcher();
+            $bootstrap = load('bootstrap');
+            $default = $bootstrap['dispatcher'];
+            $dispatcher->setDefaultNamespace($mode === 'CLI' ? $default['cli'] : $default['default']);
+
+            return $dispatcher;
         }, true);
 
         // 路由
@@ -147,7 +157,6 @@ class Bootstrap
 
             return $view;
         }, true);
-
 
         // 加解密
         if ($config = config('crypt')) {
@@ -271,13 +280,27 @@ class Bootstrap
     }
 
     /**
+     * 自定义服务注入
+     *
+     */
+    protected function customServices()
+    {
+        $di = $this->application->getDI();
+
+        // 自定义服务
+
+        $this->application->setDI($di);
+    }
+
+    /**
      * @param array $arguments
      * @throws
      */
     public function run($arguments = array())
     {
         $this->autoLoader();
-        $this->services();
+        $this->commonServices();
+        $this->customServices();
 
         if ($this->mode === 'CLI') {
             if (empty($arguments)) {
